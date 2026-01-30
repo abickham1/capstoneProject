@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # needed for flash messages
@@ -73,8 +73,9 @@ def login():
             flash("Password incorrect", "error")
             return redirect(url_for("login"))
 
+        session["username"]= username
         flash("Login successful!", "success")
-        return redirect(url_for("index"))
+        return redirect(url_for("main_menu"))
 
     return render_template("login.html")
 
@@ -89,6 +90,13 @@ def forgot():
         return redirect(url_for("forgot"))
 
     return render_template("forgot.html")
+
+@app.route("/main_menu")
+def main_menu():
+    if "username" not in session:
+        flash("Please log in to access the main menu", "error")
+        return redirect(url_for("login"))
+    return render_template("main_menu.html")
 
 # ----------------- Run -----------------
 if __name__ == "__main__":
