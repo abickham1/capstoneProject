@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><title>Signup</title></head>
+<body>
+<h1>Signup</h1>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, msg in messages %}
+      <p style="color: {% if category=='error' %}red{% else %}green{% endif %}">{{ msg }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+<form method="POST">
+  Email: <input type="text" name="email"><br>
+  Username: <input type="text" name="username"><br>
+  Password: <input type="password" name="password"><br>
+  <input type="submit" value="Create Account">
+</form>
+<a href="{{ url_for('index') }}">Home</a>
+</body>
+</html>

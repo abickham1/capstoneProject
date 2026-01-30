@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Forgot Password</title></head>
+<body>
+<h1>Forgot Password</h1>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, msg in messages %}
+      <p style="color: {% if category=='error' %}red{% else %}green{% endif %}">{{ msg }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+<form method="POST">
+  Username or Email: <input type="text" name="username_email"><br>
+  <input type="submit" value="Reset Password">
+</form>
+<a href="{{ url_for('index') }}">Home</a>
+</body>
+</html>
