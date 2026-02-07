@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>PROFILE</title></head>
+<body>
+    <style>
+        body {
+            background-image: url(https://cdn.esahubble.org/archives/images/screen/heic2414a.jpg);
+            background-size: cover;
+            color: white;
+            text-align: left;
+            font-family: 'Times New Roman', Times, serif
+        }
+</style>
+</head> 
+<body>    
+<h1>PROFILE</h1>
+<a href="{{ url_for('examinations') }}">Scores</a> |
+<a href="{{ url_for('edit username') }}">Username</a> |
+<a href="{{ url_for('change password') }}">Password</a>
+<a href="{{ url_for('delete_account') }}">Account</a>
+</body>
+</html>

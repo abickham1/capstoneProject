@@ -75,7 +75,7 @@ def login():
 
         session["username"]= username
         flash("Login successful!", "success")
-        return redirect(url_for("main_menu"))
+        return redirect(url_for("main"))
 
     return render_template("login.html")
 
@@ -91,12 +91,28 @@ def forgot():
 
     return render_template("forgot.html")
 
-@app.route("/main_menu")
-def main_menu():
+@app.route("/main")
+def main():
     if "username" not in session:
         flash("Please log in to access the main menu", "error")
         return redirect(url_for("login"))
-    return render_template("main_menu.html")
+    return render_template("main.html")
+
+@app.route("/community")
+def community():
+    return render_template("community.html")
+
+@app.route("/examinations")
+def examinations():
+    return render_template("examinations.html")
+
+@app.route("/profile")
+def profile():
+    return render_template("profile.html")
+
+@app.route("/favorites")
+def favorites():
+    return render_template("favorites.html")
 
 # ----------------- Run -----------------
 if __name__ == "__main__":
