@@ -4,19 +4,38 @@
 <body>
     <style>
         body {
-            background-image: url(https://cdn.esahubble.org/archives/images/screen/heic2414a.jpg);
+            background-color: white;
             background-size: cover;
-            color: white;
-            text-align: left;
+            color: black;
+            text-align: center;
             font-family: 'Times New Roman', Times, serif
+        }
+        .button {
+            border: none;
+            color: white;
+            padding: 16px 32px;
+            text-align: center;
+            font-size: 16px;
+            margin: 4px 2px;
+            transition-duration: 0.4s;
+            cursor: pointer;
+        }
+        .button1 {
+            background-color: gray; 
+            color: orange; 
+            border: 2px solid #4CAF50;
+            align-items: bottom;
+        }
+        .button1:hover {
+            background-color: #4CAF50;
+            color: white;
         }
 </style>
 </head> 
 <body>    
 <h1>EXAMINATIONS</h1>
-<a href="{{ url_for('tutorials') }}">Tutorial</a> |
-<a href="{{ url_for('favorites') }}">Favorites</a> |
-<a href="{{ url_for('profile') }}">Profile</a>
-<a href="{{ url_for('community') }}">Community</a>
+<img src="{{ url_for('static', filename=img_path) }}" alt="Galaxy Image">
+<button class="button button1">Green</button>
+<center></center>
 </body>
 </html>

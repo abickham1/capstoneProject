@@ -1,3 +1,5 @@
+import os
+import random
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 
 app = Flask(__name__)
@@ -8,7 +10,7 @@ users = {}  # key=username, value=dict(email, password)
 
 # ----------------- Password Validator -----------------
 import re
-def validate_password(password):
+def validate_password(password): 
     errors = []
     if len(password) < 8:
         errors.append("At least 8 characters")
@@ -102,9 +104,21 @@ def main():
 def community():
     return render_template("community.html")
 
+STATIC_IMAGE_PATH = os.path.join('static', 'data', 'galaxy-zoo', 'images_gz2','images')
+
+if os.path.exists(STATIC_IMAGE_PATH):
+    IMAGES = os.listdir(STATIC_IMAGE_PATH)
+else:
+    IMAGES = []
+    print(f"Warning: No images found at {STATIC_IMAGE_PATH}")
+
 @app.route("/examinations")
 def examinations():
-    return render_template("examinations.html")
+    if not IMAGES:
+        return "No images available"
+    img_file = random.choice(IMAGES)
+    img_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
+    return render_template("examinations.html", img_path=img_path)
 
 @app.route("/profile")
 def profile():
