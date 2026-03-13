@@ -115,7 +115,7 @@ else:
 @app.route("/examinations")
 def examinations():
     if not IMAGES:
-        return "No images available"
+        return "No images available" 
     img_file = random.choice(IMAGES)
     img_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
     return render_template("examinations.html", img_path=img_path)
