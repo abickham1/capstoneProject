@@ -21,7 +21,7 @@ for img_file in images:
     
     # Load and show image
     img = cv2.imread(img_path)
-    cv2.imshow("Galaxy - Press 's' for Spiral, 'e' for Elliptical", img)
+    cv2.imshow("Galaxy - Press 's' for Spiral, 'e' for Elliptical, 'i' for Irregular", img)
     
     # Wait for keypress
     key = cv2.waitKey(0) & 0xFF
@@ -31,6 +31,8 @@ for img_file in images:
         shutil.move(img_path, os.path.join(spiral_folder, img_file))
     elif key == ord('e'):
         shutil.move(img_path, os.path.join(elliptical_folder, img_file))
+    elif key == ord('i'):
+        shutil.move(img_path, os.path.join(irregular_folder, img_file))
     
     # Close the window for next image
     cv2.destroyAllWindows()
