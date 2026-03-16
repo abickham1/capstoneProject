@@ -1,41 +1,57 @@
 <!DOCTYPE html>
 <html>
-<head><title>EXAMINATIONS</title></head>
-<body>
+<head>
+    <title>EXAMINATIONS</title>
     <style>
         body {
             background-color: white;
-            background-size: cover;
             color: black;
             text-align: center;
-            font-family: 'Times New Roman', Times, serif
+            font-family: 'Times New Roman', Times, serif;
         }
         .button {
             border: none;
             color: white;
             padding: 16px 32px;
-            text-align: center;
-            font-size: 16px;
+            font-size: 24px; /* bigger for arrows */
             margin: 4px 2px;
-            transition-duration: 0.4s;
             cursor: pointer;
+            transition-duration: 0.4s;
         }
         .button1 {
             background-color: gray; 
             color: orange; 
             border: 2px solid #4CAF50;
-            align-items: bottom;
         }
         .button1:hover {
             background-color: #4CAF50;
             color: white;
         }
-</style>
-</head> 
+        .nav-buttons {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 40px;
+        }
+    </style>
+</head>
 <body>    
-<h1>EXAMINATIONS</h1>
-<img src="{{ url_for('static', filename=img_path) }}" alt="Galaxy Image">
-<button class="button button1">Green</button>
-<center></center>
+    <h1>EXAMINATIONS</h1>
+
+    <!-- Galaxy Image -->
+    <img src="{{ url_for('static', filename=img_path) }}" alt="Galaxy Image" width="500">
+
+    <!-- Left/Right Navigation using forms -->
+    <div class="nav-buttons">
+        <form method="post" action="/examinations">
+            <input type="hidden" name="direction" value="left">
+            <button type="submit" class="button button1">←</button>
+        </form>
+
+        <form method="post" action="/examinations">
+            <input type="hidden" name="direction" value="right">
+            <button type="submit" class="button button1">→</button>
+        </form>
+    </div>
 </body>
 </html>

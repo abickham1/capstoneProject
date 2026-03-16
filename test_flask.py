@@ -107,17 +107,44 @@ def community():
 STATIC_IMAGE_PATH = os.path.join('static', 'data', 'galaxy-zoo', 'images_gz2','images')
 
 if os.path.exists(STATIC_IMAGE_PATH):
-    IMAGES = os.listdir(STATIC_IMAGE_PATH)
+    IMAGES = sorted(os.listdir(STATIC_IMAGE_PATH))
 else:
     IMAGES = []
     print(f"Warning: No images found at {STATIC_IMAGE_PATH}")
 
-@app.route("/examinations")
+def get_random_image():
+    last_image = session["history"][-1] if session.get("history") else None
+    choices = [img for img in IMAGES if img != last_image]
+    return random.choice(choices) if choices else last_image
+    
+@app.route("/examinations", methods=["GET", "POST"])
 def examinations():
     if not IMAGES:
         return "No images available" 
-    img_file = random.choice(IMAGES)
+    
+    if "history" not in session:
+        session["history"] = []
+
+    history = session["history"]
+
+    direction = request.values.get("direction", "right")
+
+    if direction == "right":
+        img_file = get_random_image()
+        history.append(img_file) 
+
+    elif direction == "left":
+        if len(history) > 1:
+            history.pop() 
+            img_file = history[-1]  
+        else:
+            img_file = history[-1] if history else get_random_image()
+            if not history:
+                history.append(img_file)
+
+    session["history"] = history
     img_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
+
     return render_template("examinations.html", img_path=img_path)
 
 @app.route("/profile")
