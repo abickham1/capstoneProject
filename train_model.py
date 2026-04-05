@@ -1,60 +1,77 @@
 import tensorflow as tf
 from tensorflow.keras import layers, models
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.applications.efficientnet import preprocess_input
+import os
+
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 AUTOTUNE = tf.data.AUTOTUNE
-image_size = (160, 160)
-batch_size = 25
+image_size = (224, 224) 
+batch_size = 4
 
-
-# Load datasets
 train_dataset = tf.keras.utils.image_dataset_from_directory(
     "data/seed",
-    image_size= image_size,
-    batch_size= batch_size
+    image_size=image_size,
+    batch_size=batch_size
 )
 
 val_dataset = tf.keras.utils.image_dataset_from_directory(
     "data/validation",
-    image_size= image_size,
-    batch_size= batch_size
+    image_size=image_size,
+    batch_size=batch_size
 )
 
 data_augmentation = tf.keras.Sequential([
-    layers.RandomFlip("horizontal_and_vertical"),
-    layers.RandomRotation(0.2),
-    layers.RandomZoom(0.2),
+    layers.RandomFlip("horizontal"),
+    layers.RandomRotation(0.05),
+    layers.RandomZoom(0.05),
 ])
 
-base_model = MobileNetV2(
-    input_shape=(160, 160, 3), 
-    include_top=False, 
+base_model = EfficientNetB0(
+    input_shape=(224, 224, 3),
+    include_top=False,
     weights='imagenet'
 )
+
 base_model.trainable = False
+
+num_classes = len(train_dataset.class_names)
 
 model = models.Sequential([
     data_augmentation,
     base_model,
     layers.GlobalAveragePooling2D(),
-    layers.Dense(128, activation='relu'),
+    layers.Dense(128, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)),
+    layers.BatchNormalization(),
     layers.Dropout(0.5),
-    layers.Dense(10, activation='softmax')
+    layers.Dense(num_classes, activation='softmax')
 ])
 
 def preprocess(image, label):
-    image = preprocess_input(image)
-    return image, label 
+    return preprocess_input(image), label
 
-train_dataset = train_dataset.map(preprocess, num_parallel_calls = AUTOTUNE)
-val_dataset = val_dataset.map(preprocess, num_parallel_calls = AUTOTUNE)
+train_dataset = train_dataset.map(preprocess, num_parallel_calls=AUTOTUNE)
+val_dataset = val_dataset.map(preprocess, num_parallel_calls=AUTOTUNE)
 
-train_dataset = train_dataset.prefetch(buffer_size=AUTOTUNE)
-val_dataset = val_dataset.prefetch(buffer_size=AUTOTUNE)
+train_dataset = train_dataset.cache().shuffle(1000).prefetch(AUTOTUNE)
+val_dataset = val_dataset.cache().prefetch(AUTOTUNE)
+
+early_stop = tf.keras.callbacks.EarlyStopping(
+    monitor='val_accuracy',
+    patience=1,
+    restore_best_weights=True
+)
+
+checkpoint = tf.keras.callbacks.ModelCheckpoint(
+    "best_efficientnet.keras",
+    monitor="val_accuracy",
+    save_best_only=True,
+    verbose=1
+)
 
 model.compile(
-    optimizer='adam',
+    optimizer=tf.keras.optimizers.Adam(learning_rate=3e-5),
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
@@ -62,11 +79,11 @@ model.compile(
 history = model.fit(
     train_dataset,
     validation_data=val_dataset,
-    epochs= 10
+    epochs=6,
+    callbacks=[early_stop, checkpoint]
 )
-
 
 loss, accuracy = model.evaluate(val_dataset)
 print("Validation accuracy:", accuracy)
 
-model.save("galaxy_classifier.keras")
+model.save("final_galaxy_classifier.keras")
