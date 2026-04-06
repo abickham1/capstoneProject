@@ -5,10 +5,11 @@ from tensorflow.keras.applications.efficientnet import preprocess_input
 import os
 
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 AUTOTUNE = tf.data.AUTOTUNE
 image_size = (224, 224) 
-batch_size = 4
+batch_size = 8
 
 train_dataset = tf.keras.utils.image_dataset_from_directory(
     "data/seed",
@@ -59,7 +60,7 @@ val_dataset = val_dataset.cache().prefetch(AUTOTUNE)
 
 early_stop = tf.keras.callbacks.EarlyStopping(
     monitor='val_accuracy',
-    patience=1,
+    patience=2,
     restore_best_weights=True
 )
 
@@ -79,7 +80,7 @@ model.compile(
 history = model.fit(
     train_dataset,
     validation_data=val_dataset,
-    epochs=6,
+    epochs= 10,
     callbacks=[early_stop, checkpoint]
 )
 
