@@ -2,8 +2,8 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras.applications.efficientnet import preprocess_input
-import os
 import numpy as np
+import os
 
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -84,34 +84,43 @@ history = model.fit(
     epochs= 10,
     callbacks=[early_stop, checkpoint]
 )
-#load the best model and evaluate on validation set
+#
 model = tf.keras.models.load_model("best_efficientnet.keras")
-
-def tta_predict(model, dataset, n=5):
-    preds = []
-
-    for _ in range(n):
-        batch_preds = []
-        for x, _ in dataset:
-            x_aug = tf.image.random_flip_left_right(x)
-            x_aug = tf.image.random_flip_up_down(x_aug)
-
-            p = model.predict(x_aug, verbose=0)
-            batch_preds.append(p)
-        preds.append(np.concatenate(batch_preds, axis=0))
-
-    return np.mean(preds, axis=0)
-
-
-#run TTA prediction on validation set
-tta_predictions = tta_predict(model, val_dataset)
-y_true = np.concatenate([y for _, y in val_dataset], axis=0)
-y_pred = np.argmax(tta_predictions, axis=1)
-
-tta_accuracy = np.mean(y_true == y_pred)
-print("Validation accuracy with TTA:", tta_accuracy)
 
 loss, accuracy = model.evaluate(val_dataset)
 print("Validation accuracy:", accuracy)
 
-model.save("final_galaxy_classifier.keras")
+#confusion matrix and classification report
+y_pred_probs = model.predict(val_dataset)
+y_pred = np.argmax(y_pred_probs, axis=1)
+
+y_true = np.concatenate([y for x, y in val_dataset], axis=0)
+
+class_names = val_dataset.class_names
+num_classes = len(class_names)
+
+cm = np.zeros((num_classes, num_classes), dtype=int)
+
+for t, p in zip(y_true, y_pred):
+    cm[t][p] += 1
+
+print("\nConfusion Matrix:\n")
+print(cm)
+
+print("\nClassification Report:\n")
+
+for i in range(num_classes):
+    tp = cm[i, i]
+    fp = np.sum(cm[:, i]) - tp
+    fn = np.sum(cm[i, :]) - tp
+
+    precision = tp / (tp + fp + 1e-8)
+    recall = tp / (tp + fn + 1e-8)
+    f1 = 2 * precision * recall / (precision + recall + 1e-8)
+
+    print(f"{class_names[i]}:")
+    print(f"  Precision: {precision:.3f}")
+    print(f"  Recall:    {recall:.3f}")
+    print(f"  F1-score:  {f1:.3f}\n")
+
+#model.save("final_galaxy_classifier.keras")

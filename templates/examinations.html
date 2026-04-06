@@ -38,10 +38,12 @@
 <body>    
     <h1>EXAMINATIONS</h1>
 
-    <!-- Galaxy Image -->
     <img src="{{ url_for('static', filename=img_path) }}" alt="Galaxy Image" width="500">
 
-    <!-- Left/Right Navigation using forms -->
+    {% if pred_class and pred_conf %}
+        <h2>Prediction: {{ pred_class }} ({{ pred_conf | round(2) }}%)</h2>
+    {% endif %}
+
     <div class="nav-buttons">
         <form method="post" action="/examinations">
             <input type="hidden" name="direction" value="left">

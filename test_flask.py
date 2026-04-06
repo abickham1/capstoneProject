@@ -1,6 +1,12 @@
 import os
 import random
 from flask import Flask, render_template, request, redirect, url_for, flash, session
+import tensorflow as tf
+from tensorflow.keras.preprocessing import image
+import numpy as np
+
+model = tf.keras.models.load_model("final_galaxy_classifier.keras")
+class_names = ['elliptical', 'irregular', 'spiral']
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # needed for flash messages
@@ -30,6 +36,20 @@ def username_exists(username):
 
 def email_exists(email):
     return any(user["email"] == email for user in users.values())
+
+def prepare_image(img_path):
+    img = image.load_img(img_path, target_size=(224, 224)) 
+    img_array = image.img_to_array(img)
+    img_array = img_array / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
+    return img_array
+
+def predict_image(img_path):
+    img_array = prepare_image(img_path)
+    predictions = model.predict(img_array)
+    pred_class = class_names[np.argmax(predictions)]
+    pred_conf = np.max(predictions) * 100
+    return pred_class, pred_conf
 
 # ----------------- Routes -----------------
 @app.route("/")
@@ -143,9 +163,12 @@ def examinations():
                 history.append(img_file)
 
     session["history"] = history
-    img_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
+    img_rel_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
+    img_full_path = os.path.join(STATIC_IMAGE_PATH, img_file)
 
-    return render_template("examinations.html", img_path=img_path)
+    pred_class, pred_conf = predict_image(img_full_path)
+
+    return render_template("examinations.html", img_path=img_rel_path, pred_class=pred_class, pred_conf=pred_conf)
 
 @app.route("/profile")
 def profile():
