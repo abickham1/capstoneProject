@@ -3,6 +3,7 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.applications import EfficientNetB0
 from tensorflow.keras.applications.efficientnet import preprocess_input
 import os
+import numpy as np
 
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -83,6 +84,32 @@ history = model.fit(
     epochs= 10,
     callbacks=[early_stop, checkpoint]
 )
+#load the best model and evaluate on validation set
+model = tf.keras.models.load_model("best_efficientnet.keras")
+
+def tta_predict(model, dataset, n=5):
+    preds = []
+
+    for _ in range(n):
+        batch_preds = []
+        for x, _ in dataset:
+            x_aug = tf.image.random_flip_left_right(x)
+            x_aug = tf.image.random_flip_up_down(x_aug)
+
+            p = model.predict(x_aug, verbose=0)
+            batch_preds.append(p)
+        preds.append(np.concatenate(batch_preds, axis=0))
+
+    return np.mean(preds, axis=0)
+
+
+#run TTA prediction on validation set
+tta_predictions = tta_predict(model, val_dataset)
+y_true = np.concatenate([y for _, y in val_dataset], axis=0)
+y_pred = np.argmax(tta_predictions, axis=1)
+
+tta_accuracy = np.mean(y_true == y_pred)
+print("Validation accuracy with TTA:", tta_accuracy)
 
 loss, accuracy = model.evaluate(val_dataset)
 print("Validation accuracy:", accuracy)
