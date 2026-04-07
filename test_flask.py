@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.efficientnet import preprocess_input
+from datetime import timedelta
 import numpy as np
 
 model = tf.keras.models.load_model("final_galaxy_classifier.keras")
@@ -80,6 +81,12 @@ def signup():
         flash("Account created successfully!", "success")
         return redirect(url_for("login"))
 
+        session["username"] = username
+        session.permanent = True
+        app.permanent_session_lifetime = timedelta(days=1)
+
+        return redirect(url_for("main"))
+
     return render_template("signup.html")
 
 @app.route("/login", methods=["GET", "POST"])
@@ -96,11 +103,25 @@ def login():
             flash("Password incorrect", "error")
             return redirect(url_for("login"))
 
-        session["username"]= username
-        flash("Login successful!", "success")
+        session["username"] = username
+
+        remember = request.form.get("remember") 
+        if remember == "yes":
+            session.permanent = True
+            app.permanent_session_lifetime = timedelta(days=30)
+        else:
+            session.permanent = False  # expires when browser closes
+
+        #flash("Login successful!", "success")
         return redirect(url_for("main"))
 
     return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.pop("username", None)
+    flash("Logged out successfully", "success")
+    return redirect(url_for("index"))
 
 @app.route("/forgot", methods=["GET", "POST"])
 def forgot():
@@ -113,6 +134,84 @@ def forgot():
         return redirect(url_for("forgot"))
 
     return render_template("forgot.html")
+
+@app.route("/delete_account", methods=["GET", "POST"])
+def delete_account():
+    if request.method == "POST":
+        if "username" in session:
+            username = session["username"]
+            users.pop(username, None)
+            session.clear()
+            flash("Your account has been deleted.", "success")
+            return redirect(url_for("index"))
+
+    return render_template("delete_account.html")
+
+@app.route("/edit_username", methods=["GET", "POST"])
+def edit_username():
+    if "username" not in session:
+        flash("You must be logged in to edit your username.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        new_username = request.form.get("edit_username", "").strip()
+        current_username = session["username"]
+
+        if not new_username:
+            flash("Please enter a valid username.", "error")
+            return redirect(url_for("edit_username"))
+
+        if username_exists(new_username):
+            flash("This username is already taken.", "error")
+            return redirect(url_for("edit_username"))
+
+        # Update database
+        users[new_username] = users.pop(current_username)
+
+        # Update session
+        session["username"] = new_username
+
+        flash(f"Username updated successfully to {new_username}!", "success")
+        return redirect(url_for("profile"))
+
+    return render_template("edit_username.html")
+
+@app.route("/update_password", methods=["GET", "POST"])
+def update_password():
+    if "username" not in session:
+        flash("You must be logged in to update your password.", "error")
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        username = session["username"]
+
+        current_password = request.form.get("current_password", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+
+        # Check current password
+        if users[username]["password"] != current_password:
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("update_password"))
+
+        # Check match
+        if new_password != confirm_password:
+            flash("New password and confirmation do not match.", "error")
+            return redirect(url_for("update_password"))
+
+        # Validate password
+        errors = validate_password(new_password)
+        if errors:
+            flash(" | ".join(errors), "error")
+            return redirect(url_for("update_password"))
+
+        # Update password
+        users[username]["password"] = new_password
+        flash("Password updated successfully!", "success")
+        return redirect(url_for("profile"))
+
+    # GET request → show page
+    return render_template("update_password.html")
 
 @app.route("/main")
 def main():
@@ -140,53 +239,115 @@ def get_random_image():
     
 @app.route("/examinations", methods=["GET", "POST"])
 def examinations():
+    result = None
+
     if not IMAGES:
         return "No images available" 
     
     if "history" not in session:
         session["history"] = []
+        session["current_index"] = -1 # start at -1 so first right click goes to index 0
+        session["score"] = 0
+        session["attempts"] = 0
 
     history = session["history"]
+    current_index = session.get("current_index", -1)
 
-    if request.method == "POST":
-        user_choice = request.form.get("choice")
-        last_image = history[-1] if history else None
+    #favorites
+    if "favorites" not in session:
+        session["favorites"] = []
 
-        print(f"User choice: {user_choice}, Last image: {last_image}")
+    if request.method == "POST" and "favorite" in request.form:
+        img_file = history[current_index]
 
-        img_full_path = os.path.join(STATIC_IMAGE_PATH, last_image) if last_image else None
-        pred_class, pred_conf = predict_image(img_full_path) if img_full_path else ("N/A", 0)
+        favorites = session["favorites"]
 
-    direction = request.values.get("direction", "right")
+        if img_file not in favorites:
+            favorites.append(img_file)
 
-    if direction == "right":
+        session["favorites"] = favorites
+
+    if current_index == -1:
+        # First image
         img_file = get_random_image()
-        history.append(img_file) 
+        history.append(img_file)
+        current_index = 0
+        session["history"] = history
+        session["current_index"] = current_index
+    else:
+        img_file = history[current_index]
 
-    elif direction == "left":
-        if len(history) > 1:
-            history.pop() 
-            img_file = history[-1]  
-        else:
-            img_file = history[-1] if history else get_random_image()
-            if not history:
-                history.append(img_file)
+    img_full_path = os.path.join(STATIC_IMAGE_PATH, img_file)
 
-    session["history"] = history
+    if request.method == "POST" and "classification" in request.form:
+        user_choice = request.form["classification"]
+        pred_class, pred_conf = predict_image(img_full_path)
+
+        session["attempts"] = session.get("attempts", 0) + 1
+        is_correct = user_choice == pred_class
+
+        if is_correct:
+            if session["attempts"] == 1:
+                session["score"] = session.get("score", 0) + 3
+            elif session["attempts"] == 2:
+                session["score"] = session.get("score", 0) + 2
+            else:
+                session["score"] = session.get("score", 0) + 1
+
+        result = {
+            "selected": user_choice,
+            "correct_answer": pred_class,
+            "is_correct": is_correct,
+            "attempts": session["attempts"],
+            "score": session.get("score", 0)
+        }
+
+        if is_correct:
+            new_img = get_random_image()
+            history.append(new_img)
+            current_index += 1
+            session["history"] = history
+            session["current_index"] = current_index
+            session["attempts"] = 0  # reset attempts for next image
+            img_file = new_img  # display next image
+            result = None 
+
+    direction = request.values.get("direction")
+    if direction == "left" and current_index > 0:
+        current_index -= 1
+        session["current_index"] = current_index
+        session["attempts"] = 0  # reset attempts for previous image
+        img_file = history[current_index]
+        result = None
+
     img_rel_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
-    #img_full_path = os.path.join(STATIC_IMAGE_PATH, img_file)
 
-    #pred_class, pred_conf = predict_image(img_full_path)
-
-    return render_template("examinations.html", img_path=img_rel_path, class_names=class_names)
+    return render_template(
+        "examinations.html",img_path=img_rel_path,class_names=class_names,result=result,score=session.get("score", 0)
+    )
 
 @app.route("/profile")
 def profile():
     return render_template("profile.html")
 
-@app.route("/favorites")
+@app.route("/favorites", methods=["GET", "POST"])
 def favorites():
-    return render_template("favorites.html")
+    if "favorites" not in session:
+        session["favorites"] = []
+
+    favorites = session["favorites"]
+
+    if request.method == "POST":
+        img_to_remove = request.form.get("remove_image")
+
+        if img_to_remove and img_to_remove in favorites:
+            favorites.remove(img_to_remove)
+            session["favorites"] = favorites
+            flash("Removed from favorites.", "success")
+
+        return redirect(url_for("favorites"))  # ✅ prevents refresh issues
+
+    return render_template("favorites.html", favorites=favorites)
 
 # ----------------- Run -----------------
 if __name__ == "__main__":

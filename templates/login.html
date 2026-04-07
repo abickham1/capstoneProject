@@ -13,6 +13,13 @@
 </head> 
 <body>
 <h1>Login</h1>
+<div style="margin: 20px 0; display: flex; justify-content: center; gap: 20px;">
+    <!-- Back button -->
+    <button onclick="window.history.back();" 
+            style="padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #555; color: white; border: none; border-radius: 5px;">
+        ← Back
+    </button>
+
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, msg in messages %}
@@ -23,6 +30,7 @@
 <form method="POST">
   Username: <input type="text" name="username"><br>
   Password: <input type="password" name="password"><br>
+  <input type="checkbox" name="remember" value="yes"> Remember me
   <input type="submit" value="Login">
 </form>
 <a href="{{ url_for('index') }}">Home</a>

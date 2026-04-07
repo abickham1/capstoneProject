@@ -46,23 +46,72 @@
 </head>
 <body>    
     <h1>EXAMINATIONS</h1>
+    <div style="margin-bottom: 20px;">
+        <button onclick="window.history.back();" style="...">← Back</button>
+        <form action="{{ url_for('main') }}" method="get" style="display:inline;">
+            <button type="submit" style="...">Main Menu</button>
+        </form>
+    </div>
 
     <img src="{{ url_for('static', filename=img_path) }}" alt="Galaxy Image" width="500">
+
+    <form method="post" style="margin-top: 10px;">
+    <button type="submit" name="favorite" value="yes"
+        style="
+            font-size: 30px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            color: red;">
+        ❤️
+    </button>
+</form>
+
+    {% if session.favorites and img_path.split('/')[-1] in session.favorites %}
+    <span style="color: pink; font-size: 20px;">❤️ Saved</span>
+    {% endif %}
 
     {% if pred_class and pred_conf %}
         <h2>Prediction: {{ pred_class }} ({{ pred_conf | round(2) }}%)</h2>
     {% endif %}
 
     <div class="class-buttons">
-        <h3>Select the galaxy type:</h3>
-        <form method="POST" action="/examinations">
-            {% for class_name in class_names %}
-                <button type="submit" name="classification" value="{{ class_name }}">
-                    {{ class_name.capitalize() }}
-                </button>
-            {% endfor %}
-        </form>
-    </div>
+    <h3>Select the galaxy type:</h3>
+
+    <form method="POST" action="/examinations">
+        {% for class_name in class_names %}
+
+            {% set color = "" %}
+
+            {% if result %}
+                {% if class_name == result.selected %}
+                    {% if result.is_correct %}
+                        {% set color = "green" %}
+                    {% else %}
+                        {% set color = "red" %}
+                    {% endif %}
+                {% endif %}
+            {% endif %}
+
+            <button type="submit"
+                    name="classification"
+                    value="{{ class_name }}"
+                    style="padding:12px 20px; margin:5px; font-size:18px;
+                           background-color: {{ color if color else 'lightgray' }};">
+                {{ class_name.capitalize() }}
+            </button>
+
+        {% endfor %}
+    </form>
+</div>
+
+{% if result %}
+    {% if result.is_correct %}
+        <p style="color:green;"> Correct!</p>
+    {% else %}
+        <p style="color:red;"> Try again</p>
+    {% endif %}
+{% endif %}
 
     <div class="nav-buttons">
         <form method="post" action="/examinations">

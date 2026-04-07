@@ -1,18 +1,77 @@
 <!DOCTYPE html>
 <html>
-<head><title>FAVORITES</title></head>
-<body>
+<head>
+    <title>Favorites</title>
     <style>
         body {
-            background-image: url(https://cdn.esahubble.org/archives/images/screen/heic2414a.jpg);
-            background-size: cover;
+            background-color: black;
             color: white;
-            text-align: left;
-            font-family: 'Times New Roman', Times, serif
+            text-align: center;
+            font-family: 'Times New Roman', Times, serif;
         }
-</style>
-</head> 
-<body>    
+
+        .nav-buttons {
+            margin: 20px;
+        }
+
+        .nav-buttons button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .img-box {
+            display: inline-block;
+            margin: 15px;
+        }
+
+        img {
+            display: block;
+            border: 2px solid white;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
 <h1>FAVORITES</h1>
+
+<div class="nav-buttons">
+    <button onclick="window.history.back()">← Back</button>
+
+    <form action="{{ url_for('main') }}" method="get" style="display:inline;">
+        <button type="submit">Main Menu</button>
+    </form>
+</div>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <p style="color: lightgreen;">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+
+{% if favorites %}
+    {% for img in favorites %}
+        <div class="img-box">
+            <img src="{{ url_for('static', filename='data/galaxy-zoo/images_gz2/images/' + img) }}" width="300">
+            
+            <form method="post">
+                <input type="hidden" name="remove_image" value="{{ img }}">
+                <button type="submit"
+                        style="background-color: red; color: white; border: none; padding: 6px 12px; cursor: pointer;">
+                    Remove 💔
+                </button>
+            </form>
+        </div>
+    {% endfor %}
+{% else %}
+    <p>No favorites yet!</p>
+{% endif %}
+
 </body>
 </html>

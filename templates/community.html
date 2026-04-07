@@ -14,6 +14,12 @@
 </head> 
 <body>    
 <h1>COMMUNITY</h1>
+<div style="margin-bottom: 20px;">
+        <button onclick="window.history.back();" style="...">← Back</button>
+        <form action="{{ url_for('main') }}" method="get" style="display:inline;">
+            <button type="submit" style="...">Main Menu</button>
+        </form>
+    </div>
 <a href="{{ url_for('tutorials') }}">Tutorial</a> |
 <a href="{{ url_for('favorites') }}">Favorites</a> |
 <a href="{{ url_for('profile') }}">Profile</a>

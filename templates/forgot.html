@@ -13,6 +13,12 @@
 </head> 
 <body>
 <h1>Forgot Password</h1>
+<div style="margin-bottom: 20px;">
+        <button onclick="window.history.back();" style="...">← Back</button>
+        <form action="{{ url_for('main') }}" method="get" style="display:inline;">
+            <button type="submit" style="...">Main Menu</button>
+        </form>
+    </div>
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
     {% for category, msg in messages %}
