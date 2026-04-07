@@ -18,6 +18,8 @@ train_dataset = tf.keras.utils.image_dataset_from_directory(
     batch_size=batch_size
 )
 
+print("Class names:", train_dataset.class_names)
+
 val_dataset = tf.keras.utils.image_dataset_from_directory(
     "data/validation",
     image_size=image_size,

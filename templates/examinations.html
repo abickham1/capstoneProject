@@ -27,6 +27,15 @@
             background-color: #4CAF50;
             color: white;
         }
+        .class-buttons {
+            margin-top: 20px;
+        }
+        .class-buttons button {
+            padding: 12px 20px;
+            margin: 5px;
+            font-size: 18px;
+            cursor: pointer;
+        }
         .nav-buttons {
             display: flex;
             justify-content: center;
@@ -43,6 +52,17 @@
     {% if pred_class and pred_conf %}
         <h2>Prediction: {{ pred_class }} ({{ pred_conf | round(2) }}%)</h2>
     {% endif %}
+
+    <div class="class-buttons">
+        <h3>Select the galaxy type:</h3>
+        <form method="POST" action="/examinations">
+            {% for class_name in class_names %}
+                <button type="submit" name="classification" value="{{ class_name }}">
+                    {{ class_name.capitalize() }}
+                </button>
+            {% endfor %}
+        </form>
+    </div>
 
     <div class="nav-buttons">
         <form method="post" action="/examinations">

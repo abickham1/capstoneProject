@@ -3,6 +3,7 @@ import random
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
+from tensorflow.keras.applications.efficientnet import preprocess_input
 import numpy as np
 
 model = tf.keras.models.load_model("final_galaxy_classifier.keras")
@@ -40,7 +41,7 @@ def email_exists(email):
 def prepare_image(img_path):
     img = image.load_img(img_path, target_size=(224, 224)) 
     img_array = image.img_to_array(img)
-    img_array = img_array / 255.0
+    img_array = preprocess_input(img_array)
     img_array = np.expand_dims(img_array, axis=0)
     return img_array
 
@@ -147,6 +148,15 @@ def examinations():
 
     history = session["history"]
 
+    if request.method == "POST":
+        user_choice = request.form.get("choice")
+        last_image = history[-1] if history else None
+
+        print(f"User choice: {user_choice}, Last image: {last_image}")
+
+        img_full_path = os.path.join(STATIC_IMAGE_PATH, last_image) if last_image else None
+        pred_class, pred_conf = predict_image(img_full_path) if img_full_path else ("N/A", 0)
+
     direction = request.values.get("direction", "right")
 
     if direction == "right":
@@ -164,11 +174,11 @@ def examinations():
 
     session["history"] = history
     img_rel_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
-    img_full_path = os.path.join(STATIC_IMAGE_PATH, img_file)
+    #img_full_path = os.path.join(STATIC_IMAGE_PATH, img_file)
 
-    pred_class, pred_conf = predict_image(img_full_path)
+    #pred_class, pred_conf = predict_image(img_full_path)
 
-    return render_template("examinations.html", img_path=img_rel_path, pred_class=pred_class, pred_conf=pred_conf)
+    return render_template("examinations.html", img_path=img_rel_path, class_names=class_names)
 
 @app.route("/profile")
 def profile():
