@@ -6,8 +6,10 @@ from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.efficientnet import preprocess_input
 from datetime import timedelta
 import numpy as np
+import sqlite3
+from datetime import datetime
 
-model = tf.keras.models.load_model("final_galaxy_classifier.keras")
+model = None
 class_names = ['elliptical', 'irregular', 'spiral']
 
 app = Flask(__name__)
@@ -39,6 +41,12 @@ def username_exists(username):
 def email_exists(email):
     return any(user["email"] == email for user in users.values())
 
+def load_model():
+    global model
+    if model is None:
+        model = tf.keras.models.load_model("final_galaxy_classifier.keras")  
+    return model
+
 def prepare_image(img_path):
     img = image.load_img(img_path, target_size=(224, 224)) 
     img_array = image.img_to_array(img)
@@ -48,11 +56,52 @@ def prepare_image(img_path):
 
 def predict_image(img_path):
     img_array = prepare_image(img_path)
-    predictions = model.predict(img_array)
+    predictions = load_model().predict(img_array)
     pred_class = class_names[np.argmax(predictions)]
     pred_conf = np.max(predictions) * 100
     return pred_class, pred_conf
 
+def get_db_connection():
+    conn = sqlite3.connect("users.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def init_db():
+    conn = get_db_connection()
+    with conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS chats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            image_name TEXT NOT NULL,
+            username TEXT NOT NULL,
+            message TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.close()
+
+def get_chat_counts():
+    conn = get_db_connection()
+    data = conn.execute("""
+        SELECT image_name, COUNT(*) as count 
+        FROM chats 
+        GROUP BY image_name
+    """).fetchall()
+    conn.close()
+
+    return {row["image_name"]: row["count"] for row in data}
+
+def get_seen_images():
+    return list(dict.fromkeys(session.get("history", [])))
 # ----------------- Routes -----------------
 @app.route("/")
 def index():
@@ -220,10 +269,55 @@ def main():
         return redirect(url_for("login"))
     return render_template("main.html")
 
-@app.route("/community")
+@app.route("/community", methods=["GET", "POST"])
 def community():
-    return render_template("community.html")
 
+    chat_counts = get_chat_counts()
+
+    seen_images = session.get("history", [])
+
+    if not seen_images:
+        seen_images = []
+
+    image_name = request.args.get("image_name")
+
+    conn = get_db_connection()
+
+    chats = []
+    img_path = None
+
+    # POST message only allowed if image is in history
+    if request.method == "POST" and image_name:
+        if image_name in seen_images:
+            message = request.form.get("message", "").strip()
+
+            if message and "username" in session:
+                conn.execute(
+                    "INSERT INTO chats (image_name, username, message) VALUES (?, ?, ?)",
+                    (image_name, session["username"], message)
+                )
+                conn.commit()
+        else:
+            flash("You can only comment on galaxies you've seen!", "error")
+
+    if image_name and image_name in seen_images:
+        chats = conn.execute(
+            "SELECT * FROM chats WHERE image_name = ? ORDER BY created_at ASC",
+            (image_name,)
+        ).fetchall()
+
+        img_path = f"data/galaxy-zoo/images_gz2/images/{image_name}"
+
+    conn.close()
+
+    return render_template(
+        "community.html",
+        images=seen_images,  
+        chats=chats,
+        img_path=img_path,
+        image_name=image_name,
+        chat_counts=chat_counts
+    )
 STATIC_IMAGE_PATH = os.path.join('static', 'data', 'galaxy-zoo', 'images_gz2','images')
 
 if os.path.exists(STATIC_IMAGE_PATH):
@@ -247,8 +341,6 @@ def examinations():
     if "history" not in session:
         session["history"] = []
         session["current_index"] = -1 # start at -1 so first right click goes to index 0
-        session["score"] = 0
-        session["attempts"] = 0
 
     history = session["history"]
     current_index = session.get("current_index", -1)
@@ -274,6 +366,7 @@ def examinations():
         current_index = 0
         session["history"] = history
         session["current_index"] = current_index
+        session.modified = True
     else:
         img_file = history[current_index]
 
@@ -283,32 +376,23 @@ def examinations():
         user_choice = request.form["classification"]
         pred_class, pred_conf = predict_image(img_full_path)
 
-        session["attempts"] = session.get("attempts", 0) + 1
         is_correct = user_choice == pred_class
-
-        if is_correct:
-            if session["attempts"] == 1:
-                session["score"] = session.get("score", 0) + 3
-            elif session["attempts"] == 2:
-                session["score"] = session.get("score", 0) + 2
-            else:
-                session["score"] = session.get("score", 0) + 1
 
         result = {
             "selected": user_choice,
             "correct_answer": pred_class,
-            "is_correct": is_correct,
-            "attempts": session["attempts"],
-            "score": session.get("score", 0)
+            "is_correct": is_correct
         }
 
         if is_correct:
             new_img = get_random_image()
             history.append(new_img)
             current_index += 1
+
             session["history"] = history
             session["current_index"] = current_index
-            session["attempts"] = 0  # reset attempts for next image
+            session.modified = True
+
             img_file = new_img  # display next image
             result = None 
 
@@ -316,14 +400,13 @@ def examinations():
     if direction == "left" and current_index > 0:
         current_index -= 1
         session["current_index"] = current_index
-        session["attempts"] = 0  # reset attempts for previous image
         img_file = history[current_index]
         result = None
 
     img_rel_path = f"data/galaxy-zoo/images_gz2/images/{img_file}"
 
     return render_template(
-        "examinations.html",img_path=img_rel_path,class_names=class_names,result=result,score=session.get("score", 0)
+        "examinations.html",img_path=img_rel_path,class_names=class_names,result=result
     )
 
 @app.route("/profile")
@@ -351,4 +434,5 @@ def favorites():
 
 # ----------------- Run -----------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    init_db()
+    app.run(debug=True, use_reloader=False)

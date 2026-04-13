@@ -53,7 +53,9 @@
         </form>
     </div>
 
-    <img src="{{ url_for('static', filename=img_path) }}" alt="Galaxy Image" width="500">
+<a href="{{ url_for('community', image_name=img_path.split('/')[-1]) }}">
+    <img src="{{ url_for('static', filename=img_path) }}" width="400">
+</a>
 
     <form method="post" style="margin-top: 10px;">
     <button type="submit" name="favorite" value="yes"

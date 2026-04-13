@@ -1,28 +1,91 @@
 <!DOCTYPE html>
 <html>
-<head><title>COMMUNITY</title></head>
-<body>
+<head>
+    <title>COMMUNITY</title>
     <style>
-        body {
-            background-image: url(https://cdn.esahubble.org/archives/images/screen/heic2414a.jpg);
-            background-size: cover;
-            color: white;
-            text-align: left;
-            font-family: 'Times New Roman', Times, serif
+        body { font-family: Arial; }
+
+        .gallery {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
         }
-</style>
-</head> 
-<body>    
+
+        .card {
+            text-align: center;
+        }
+
+        img {
+            border: 2px solid #ccc;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        img:hover {
+            border-color: blue;
+            transform: scale(1.03);
+        }
+
+        .label {
+            font-size: 0.9em;
+            margin-top: 5px;
+            color: gray;
+        }
+
+        button {
+            padding: 8px 16px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
 <h1>COMMUNITY</h1>
+
 <div style="margin-bottom: 20px;">
-        <button onclick="window.history.back();" style="...">← Back</button>
-        <form action="{{ url_for('main') }}" method="get" style="display:inline;">
-            <button type="submit" style="...">Main Menu</button>
-        </form>
-    </div>
-<a href="{{ url_for('tutorials') }}">Tutorial</a> |
-<a href="{{ url_for('favorites') }}">Favorites</a> |
-<a href="{{ url_for('profile') }}">Profile</a>
-<a href="{{ url_for('community') }}">Community</a>
+    <button onclick="window.history.back();">← Back</button>
+    <a href="{{ url_for('main') }}">
+        <button>Main Menu</button>
+    </a>
+</div>
+
+{% if not image_name %}
+
+<div class="gallery">
+    {% for img in images %}
+        <div class="card">
+            <a href="{{ url_for('community', image_name=img) }}">
+                <img src="{{ url_for('static', filename='data/galaxy-zoo/images_gz2/images/' + img) }}"
+                     width="200">
+            </a>
+            <div class="label">💬 Open Chat</div>
+        </div>
+    {% endfor %}
+</div>
+
+{% else %}
+
+
+<h2>Chat for {{ image_name }}</h2>
+
+<img src="{{ url_for('static', filename='data/galaxy-zoo/images_gz2/images/' + image_name) }}"
+     width="300">
+
+<hr>
+
+<div>
+    {% for chat in chats %}
+        <p><b>{{ chat.username }}:</b> {{ chat.message }}</p>
+    {% endfor %}
+</div>
+
+<form method="POST" action="{{ url_for('community', image_name=image_name) }}">
+    <input name="message" placeholder="Write message..." required>
+    <button type="submit">Send</button>
+</form>
+
+{% endif %}
 </body>
 </html>
